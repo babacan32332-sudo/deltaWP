@@ -3,378 +3,335 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Delta Eclipse Prime v5</title>
+    <title>Delta Eclipse Prime v6</title>
     <style>
         :root {
-            --p: #00ffa3; --pd: #008f5d; --bg: #050a0e; --panel: #0d161d;
-            --msg-out: #005c4b; --msg-in: #1b2730; --txt: #e9edef; --muted: #8696a0;
-            --accent: #00ffa3; --danger: #ff4d4d; --glass: rgba(255, 255, 255, 0.05);
+            --p: #00ffa3; --bg: #050a0e; --panel: #0d161d;
+            --msg-out: #005c4b; --msg-in: #1b2730; --txt: #e9edef;
+            --muted: #8696a0; --glass: rgba(255, 255, 255, 0.05);
         }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         body { background: var(--bg); height: 100vh; overflow: hidden; color: var(--txt); }
 
-        /* --- NEW PREMIUM LOADING --- */
-        #loading-screen {
-            position: fixed; inset: 0; background: radial-gradient(circle at center, #0d161d 0%, #050a0e 100%);
-            z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        /* --- LOADING --- */
+        #loading {
+            position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
-        .loader-logo { font-size: 40px; font-weight: bold; color: var(--p); text-shadow: 0 0 20px var(--p); margin-bottom: 20px; animation: pulse 1.5s infinite; }
-        .progress-bar { width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
-        .progress-fill { width: 0%; height: 100%; background: var(--p); box-shadow: 0 0 15px var(--p); animation: load 2s forwards; }
-        @keyframes load { to { width: 100%; } }
-        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.95); } }
+        .ring { width: 50px; height: 50px; border: 3px solid var(--panel); border-top-color: var(--p); border-radius: 50%; animation: spin 1s infinite linear; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* --- AUTH VIEW --- */
-        #auth-view {
-            height: 100vh; display: flex; justify-content: center; align-items: center; z-index: 100; position: relative;
-        }
-        .auth-card {
-            width: 90%; max-width: 400px; background: var(--panel); padding: 40px; border-radius: 30px;
-            border: 1px solid var(--glass); text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.8);
-        }
-        .captcha-box { background: #000; color: var(--p); padding: 15px; font-size: 24px; letter-spacing: 10px; border-radius: 15px; margin: 20px 0; font-family: monospace; border: 1px dashed var(--p); }
+        /* --- LAYOUT --- */
+        #app { display: none; height: 100vh; width: 100%; }
+        .main-container { display: flex; height: 100%; width: 100%; }
 
-        /* --- APP VIEW --- */
-        #app-view { display: none; height: 100vh; width: 100%; }
-        .layout { display: flex; height: 100%; }
-
-        /* SIDEBAR & SEARCH FIX */
-        #sidebar { width: 380px; background: var(--panel); border-right: 1px solid var(--glass); display: flex; flex-direction: column; position: relative; }
-        .search-container { padding: 20px; position: relative; }
-        #search-results {
-            position: absolute; top: 75px; left: 20px; right: 20px; background: var(--panel);
-            border-radius: 15px; border: 1px solid var(--p); z-index: 200; display: none;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-height: 300px; overflow-y: auto;
-        }
-
-        /* CHAT ITEMS */
-        .chat-item { padding: 15px 20px; display: flex; align-items: center; gap: 15px; cursor: pointer; border-bottom: 1px solid var(--glass); }
-        .chat-item:hover { background: var(--glass); }
-        .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #1b2730; border: 2px solid transparent; }
+        /* SIDEBAR */
+        #sidebar { width: 350px; background: var(--panel); border-right: 1px solid var(--glass); display: flex; flex-direction: column; position: relative; }
+        .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); }
+        .avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #222; cursor: pointer; border: 2px solid transparent; }
         .avatar:hover { border-color: var(--p); }
+
+        /* SEARCH AREA */
+        .search-box { padding: 15px; position: relative; }
+        #search-input { width: 100%; padding: 10px 15px; border-radius: 20px; border: 1px solid var(--glass); background: #000; color: #fff; outline: none; }
+        #search-results { 
+            position: absolute; top: 60px; left: 15px; right: 15px; background: var(--panel); 
+            border: 1px solid var(--p); border-radius: 10px; z-index: 1000; display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* CHAT LIST */
+        .chat-list { flex: 1; overflow-y: auto; }
+        .chat-item { padding: 12px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-bottom: 1px solid var(--glass); }
+        .chat-item:hover { background: var(--glass); }
 
         /* CHAT WINDOW */
         #chat-window { flex: 1; display: flex; flex-direction: column; background: #0b141a; position: relative; }
         #msg-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        
-        .msg { max-width: 70%; padding: 12px 16px; border-radius: 18px; position: relative; font-size: 15px; line-height: 1.4; }
-        .msg-out { align-self: flex-end; background: var(--msg-out); border-bottom-right-radius: 4px; }
-        .msg-in { align-self: flex-start; background: var(--msg-in); border-bottom-left-radius: 4px; }
-        
-        .react-bar { display: flex; gap: 5px; margin-top: 5px; font-size: 12px; }
-        .react-tag { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 10px; }
+        .msg { max-width: 70%; padding: 10px 14px; border-radius: 15px; font-size: 15px; line-height: 1.4; position: relative; }
+        .msg-out { align-self: flex-end; background: var(--msg-out); border-bottom-right-radius: 2px; }
+        .msg-in { align-self: flex-start; background: var(--msg-in); border-bottom-left-radius: 2px; }
 
         /* CONTROLS */
-        input { width: 100%; padding: 12px 20px; border-radius: 25px; border: 1px solid var(--glass); background: #050a0e; color: white; outline: none; }
-        input:focus { border-color: var(--p); box-shadow: 0 0 10px rgba(0,255,163,0.2); }
-        .btn-p { background: var(--p); color: #000; font-weight: bold; border: none; border-radius: 25px; padding: 12px 25px; cursor: pointer; }
-        
+        .input-bar { padding: 15px; background: var(--panel); display: flex; gap: 10px; }
+        .input-bar input { flex: 1; padding: 12px 20px; border-radius: 25px; border: none; background: #000; color: #fff; outline: none; }
+        .btn-send { background: var(--p); color: #000; border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; font-weight: bold; }
+
         /* PANELS */
-        .side-panel { position: absolute; inset: 0; background: var(--panel); z-index: 500; transform: translateX(-100%); padding: 30px; }
-        .side-panel.open { transform: translateX(0); }
+        .panel { position: absolute; inset: 0; background: var(--panel); z-index: 500; transform: translateX(-100%); transition: 0.4s ease; padding: 20px; }
+        .panel.open { transform: translateX(0); }
+        .close-btn { color: var(--p); cursor: pointer; margin-bottom: 20px; display: inline-block; }
+
+        /* AUTH */
+        #auth { height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .auth-card { background: var(--panel); padding: 30px; border-radius: 20px; width: 350px; text-align: center; box-shadow: 0 20px 50px #000; }
+        .captcha { background: #000; color: var(--p); padding: 10px; margin: 15px 0; letter-spacing: 5px; font-weight: bold; border-radius: 5px; }
 
         @media (max-width: 768px) {
             #sidebar { width: 100%; position: absolute; z-index: 100; }
-            #sidebar.hidden { transform: translateX(-100%); }
+            #sidebar.hide { display: none; }
         }
     </style>
 </head>
 <body>
 
-    <!-- LOADING -->
-    <div id="loading-screen">
-        <div class="loader-logo">DELTA ECLIPSE PRIME</div>
-        <div class="progress-bar"><div class="progress-fill"></div></div>
-        <p style="margin-top:15px; font-size:12px; letter-spacing:2px; opacity:0.5;">SİSTEM BAŞLATILIYOR...</p>
-    </div>
+    <div id="loading"><div class="ring"></div><p style="margin-top:10px">Sohbet Yükleniyor...</p></div>
 
     <!-- AUTH -->
-    <div id="auth-view">
+    <div id="auth">
         <div class="auth-card">
-            <h1 style="color:var(--p)">Giriş Yap</h1>
-            <p style="color:var(--muted); margin-bottom:25px;">Sanal Dünyana Hoş Geldin</p>
-            <input type="text" id="user-in" placeholder="Kullanıcı Adı" style="margin-bottom:10px;">
-            <input type="password" id="pass-in" placeholder="Şifre" style="margin-bottom:10px;">
-            <div class="captcha-box" id="captcha-box">----</div>
-            <input type="text" id="captcha-in" placeholder="Doğrulama Kodunu Gir" style="margin-bottom:20px; text-align:center;">
-            <button class="btn-p" style="width:100%" onclick="handleAuth()">SİSTEME GİRİŞ YAP</button>
+            <h2 style="color:var(--p)">Delta Eclipse</h2>
+            <p style="font-size:12px; color:var(--muted)">v6 Prime Edition</p>
+            <input type="text" id="u-in" placeholder="Kullanıcı Adı" style="width:100%; padding:10px; margin-top:20px; background:#000; color:#fff; border:none; border-radius:5px;">
+            <input type="password" id="p-in" placeholder="Şifre" style="width:100%; padding:10px; margin-top:10px; background:#000; color:#fff; border:none; border-radius:5px;">
+            <div class="captcha" id="cap-box">0000</div>
+            <input type="text" id="cap-in" placeholder="Kodu Onayla" style="width:100%; padding:10px; background:#000; color:#fff; border:none; border-radius:5px;">
+            <button onclick="login()" style="width:100%; padding:12px; margin-top:20px; background:var(--p); border:none; border-radius:5px; font-weight:bold; cursor:pointer;">GİRİŞ YAP</button>
         </div>
     </div>
 
     <!-- APP -->
-    <div id="app-view">
-        <div class="layout">
+    <div id="app">
+        <div class="main-container">
             <div id="sidebar">
-                <div style="padding:15px 20px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2)">
-                    <img id="my-avatar" class="avatar" onclick="togglePanel('profile-panel')" style="cursor:pointer">
-                    <h3 style="color:var(--p); font-size:16px;">PRIME v5</h3>
+                <div class="header">
+                    <img id="my-av" class="avatar" onclick="openPanel('my-profile')">
+                    <h4 style="color:var(--p)">Sohbetler</h4>
+                    <button onclick="logout()" style="background:none; border:none; color:var(--muted); cursor:pointer;">Çıkış</button>
                 </div>
-
-                <div class="search-container">
-                    <input type="text" id="search-input" placeholder="Kullanıcı ara..." oninput="liveSearch()">
+                
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Arkadaşlarını bul..." oninput="doSearch()">
                     <div id="search-results"></div>
                 </div>
 
-                <div id="chat-list" style="flex:1; overflow-y:auto;"></div>
+                <div id="chat-list" class="chat-list"></div>
 
-                <!-- PROFİL PANELİ -->
-                <div id="profile-panel" class="side-panel">
-                    <h2 onclick="togglePanel('profile-panel')" style="cursor:pointer; margin-bottom:30px;">⬅ Geri Dön</h2>
+                <!-- KENDİ PROFİLİM -->
+                <div id="my-profile" class="panel">
+                    <span class="close-btn" onclick="closePanel('my-profile')">⬅ Geri</span>
                     <div style="text-align:center">
-                        <img id="edit-avatar-preview" class="avatar" style="width:120px; height:120px; margin-bottom:20px" onclick="document.getElementById('file-in').click()">
-                        <input type="file" id="file-in" hidden onchange="updateAvatar(this)">
-                        
-                        <div style="text-align:left; margin-top:20px;">
-                            <label style="color:var(--p); font-size:12px;">KULLANICI ADI</label>
-                            <input type="text" id="edit-username" style="margin-bottom:15px;">
-                            
-                            <label style="color:var(--p); font-size:12px;">HAKKIMDA (BİO)</label>
-                            <input type="text" id="edit-bio" placeholder="Bio ekle.." style="margin-bottom:15px;">
-                            
-                            <label style="color:var(--p); font-size:12px;">DOĞUM TARİHİ</label>
-                            <input type="date" id="edit-bday" style="margin-bottom:25px;">
-                            
-                            <button class="btn-p" style="width:100%" onclick="saveProfile()">KAYDET</button>
-                            <button class="btn-p" style="width:100%; margin-top:10px; background:var(--danger); color:white;" onclick="logout()">ÇIKIŞ YAP</button>
-                        </div>
+                        <img id="my-av-big" class="avatar" style="width:100px; height:100px; margin-bottom:20px" onclick="document.getElementById('file-in').click()">
+                        <input type="file" id="file-in" hidden onchange="changeAv(this)">
+                        <input type="text" id="my-name-in" placeholder="İsim Değiştir" style="width:100%; padding:10px; margin-bottom:10px; background:#000; color:#fff; border:1px solid var(--glass);">
+                        <input type="text" id="my-bio-in" placeholder="Bio ekle.." style="width:100%; padding:10px; margin-bottom:10px; background:#000; color:#fff; border:1px solid var(--glass);">
+                        <input type="date" id="my-bday-in" style="width:100%; padding:10px; background:#000; color:#fff; border:1px solid var(--glass);">
+                        <button onclick="saveMe()" style="width:100%; padding:12px; margin-top:20px; background:var(--p); border:none; border-radius:5px; font-weight:bold;">KAYDET</button>
                     </div>
                 </div>
             </div>
 
+            <!-- CHAT -->
             <div id="chat-window">
-                <div id="chat-header" style="padding:15px 25px; background:var(--panel); display:none; align-items:center; justify-content:space-between; border-bottom:1px solid var(--glass)">
-                    <div style="display:flex; align-items:center; gap:15px;">
-                        <button onclick="closeChat()" id="back-btn" style="background:none; border:none; color:var(--p); font-size:20px; display:none;">⬅</button>
-                        <img id="target-avatar" class="avatar">
-                        <div>
-                            <div id="target-name" style="font-weight:bold">İsim</div>
-                            <div style="font-size:11px; color:var(--p)">Aktif</div>
-                        </div>
+                <div id="chat-header" style="padding:15px; background:var(--panel); display:none; align-items:center; border-bottom:1px solid var(--glass); gap:15px;">
+                    <span onclick="mobileBack()" style="color:var(--p); cursor:pointer; font-size:20px; display:none;" id="m-back">⬅</span>
+                    <img id="t-av" class="avatar" onclick="showTargetProfile()">
+                    <div onclick="showTargetProfile()" style="cursor:pointer">
+                        <div id="t-name" style="font-weight:bold">İsim</div>
+                        <div style="font-size:11px; color:var(--p)">Çevrimiçi</div>
                     </div>
-                    <button onclick="toggleBlock()" id="block-btn" style="background:none; border:none; color:var(--danger); font-weight:bold; cursor:pointer;">ENGELLE</button>
                 </div>
 
                 <div id="msg-container">
-                    <div style="margin:auto; text-align:center; opacity:0.2">
-                        <h1 style="font-size:100px;">💬</h1>
-                        <p>Delta Eclipse Güvenli Hattı</p>
+                    <div style="margin:auto; text-align:center; opacity:0.2"><h1>DELTA PRIME</h1><p>Bir sohbet seç veya ara.</p></div>
+                </div>
+
+                <div id="input-bar" class="input-bar" style="display:none">
+                    <input type="text" id="msg-in" placeholder="Mesaj yaz..." onkeypress="if(event.key=='Enter') send()">
+                    <button class="btn-send" onclick="send()">➤</button>
+                </div>
+
+                <!-- KARŞI TARAF PROFİLİ -->
+                <div id="target-profile" class="panel">
+                    <span class="close-btn" onclick="closePanel('target-profile')">⬅ Sohbet</span>
+                    <div style="text-align:center; margin-top:50px;">
+                        <img id="tp-av" class="avatar" style="width:120px; height:120px;">
+                        <h2 id="tp-name" style="margin:20px 0 5px;">İsim</h2>
+                        <p id="tp-bio" style="color:var(--muted)">Bio yok...</p>
+                        <p id="tp-bday" style="font-size:12px; color:var(--p); margin-top:10px;"></p>
+                        <hr style="margin:30px 0; border:0; border-top:1px solid var(--glass);">
+                        <button onclick="block()" style="color:red; background:none; border:none; cursor:pointer;">Kullanıcıyı Engelle</button>
                     </div>
                 </div>
-
-                <div id="input-bar" style="padding:20px; background:var(--panel); display:none; gap:15px;">
-                    <input type="text" id="msg-input" placeholder="Mesajınızı yazın..." onkeypress="if(event.key=='Enter') sendMsg()">
-                    <button class="btn-p" onclick="sendMsg()">GÖNDER</button>
-                </div>
             </div>
-        </div>
-    </div>
-
-    <!-- MSJ MENÜ -->
-    <div id="msg-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
-        <div style="background:var(--panel); padding:25px; border-radius:25px; width:280px; text-align:center; border:1px solid var(--p);">
-            <div style="display:flex; justify-content:space-around; margin-bottom:20px; font-size:24px;">
-                <span onclick="reactMsg('🔥')" style="cursor:pointer">🔥</span>
-                <span onclick="reactMsg('😂')" style="cursor:pointer">😂</span>
-                <span onclick="reactMsg('❤️')" style="cursor:pointer">❤️</span>
-                <span onclick="reactMsg('👍')" style="cursor:pointer">👍</span>
-            </div>
-            <button class="btn-p" style="width:100%; background:var(--glass); color:white; margin-bottom:10px;" onclick="deleteMsg('me')">Benden Sil</button>
-            <button id="btn-del-all" class="btn-p" style="width:100%; background:var(--danger); color:white; margin-bottom:15px;" onclick="deleteMsg('all')">Herkezden Sil</button>
-            <p onclick="closeModal()" style="cursor:pointer; color:var(--muted)">Kapat</p>
         </div>
     </div>
 
     <script>
         let db = {
-            users: JSON.parse(localStorage.getItem('de_v5_users')) || [{username:'Delta', password:'1', avatar:'', bio:'Admin', bday:'', blocked:[]}],
-            msgs: JSON.parse(localStorage.getItem('de_v5_msgs')) || [],
-            session: JSON.parse(localStorage.getItem('de_v5_session')) || null
+            users: JSON.parse(localStorage.getItem('dp_v6_users')) || [{username:'Delta', password:'1', avatar:'', bio:'Admin', bday:''}],
+            msgs: JSON.parse(localStorage.getItem('dp_v6_msgs')) || [],
+            session: JSON.parse(localStorage.getItem('dp_v6_session')) || null,
+            interacted: JSON.parse(localStorage.getItem('dp_v6_inter')) || [] // Sohbet listesindeki kişiler
         };
 
-        let currentCaptcha = "";
-        let activeChat = null;
-        let selectedMsgId = null;
+        let cap = "";
+        let active = null;
 
         window.onload = () => {
-            refreshCaptcha();
+            genCap();
             setTimeout(() => {
-                document.getElementById('loading-screen').style.display = 'none';
-                if(db.session) loginSuccess(db.session);
-            }, 2500);
+                document.getElementById('loading').style.display = 'none';
+                if(db.session) loginOk(db.session);
+            }, 1500);
         };
 
-        function refreshCaptcha() {
-            currentCaptcha = Math.floor(1000 + Math.random() * 9000).toString();
-            document.getElementById('captcha-box').innerText = currentCaptcha;
+        function genCap() {
+            cap = Math.floor(1000 + Math.random() * 9000).toString();
+            document.getElementById('cap-box').innerText = cap;
         }
 
-        // --- AUTH ---
-        function handleAuth() {
-            const u = document.getElementById('user-in').value.trim();
-            const p = document.getElementById('pass-in').value.trim();
-            const c = document.getElementById('captcha-in').value.trim();
+        function login() {
+            const u = document.getElementById('u-in').value.trim();
+            const p = document.getElementById('p-in').value.trim();
+            const c = document.getElementById('cap-in').value.trim();
 
-            if(!u || !p || c !== currentCaptcha) {
-                alert("Bilgiler hatalı veya Captcha yanlış!");
-                refreshCaptcha();
-                return;
-            }
+            if(!u || !p || c !== cap) { alert("Bilgiler veya kod hatalı!"); genCap(); return; }
 
             let user = db.users.find(x => x.username.toLowerCase() === u.toLowerCase());
             if(user) {
-                if(user.password !== p) { alert("Hatalı şifre!"); refreshCaptcha(); return; }
+                if(user.password !== p) { alert("Şifre yanlış!"); return; }
             } else {
-                user = { username: u, password: p, avatar: '', bio: '', bday: '', blocked: [] };
+                user = { username: u, password: p, avatar: '', bio: '', bday: '' };
                 db.users.push(user);
                 save();
             }
-            loginSuccess(user);
+            loginOk(user);
         }
 
-        function loginSuccess(user) {
+        function loginOk(user) {
             db.session = user;
-            localStorage.setItem('de_v5_session', JSON.stringify(user));
-            document.getElementById('auth-view').style.display = 'none';
-            document.getElementById('app-view').style.display = 'block';
+            localStorage.setItem('dp_v6_session', JSON.stringify(user));
+            document.getElementById('auth').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
             updateUI();
-            renderSidebar();
+            renderList();
         }
 
-        function logout() { localStorage.clear(); location.reload(); }
+        function logout() { localStorage.removeItem('dp_v6_session'); location.reload(); }
 
-        // --- SEARCH FIX ---
-        function liveSearch() {
+        // --- ARAMA SİSTEMİ (FIXED) ---
+        function doSearch() {
             const val = document.getElementById('search-input').value.toLowerCase().trim();
-            const resDiv = document.getElementById('search-results');
-            if(!val) { resDiv.style.display = 'none'; return; }
+            const res = document.getElementById('search-results');
+            if(!val) { res.style.display = 'none'; return; }
 
             const hits = db.users.filter(u => u.username.toLowerCase().includes(val) && u.username !== db.session.username);
             
             if(hits.length > 0) {
-                resDiv.innerHTML = hits.map(u => `
-                    <div class="chat-item" onclick="openChat('${u.username}')">
-                        <img src="${u.avatar || defAv()}" class="avatar" style="width:35px; height:35px">
+                res.innerHTML = hits.map(u => `
+                    <div class="chat-item" onclick="startChat('${u.username}')">
+                        <img src="${u.avatar || defAv()}" class="avatar" style="width:30px; height:30px">
                         <span>${u.username}</span>
                     </div>
                 `).join('');
-                resDiv.style.display = 'block';
+                res.style.display = 'block';
             } else {
-                resDiv.innerHTML = '<p style="padding:15px; color:gray; font-size:12px">Kullanıcı bulunamadı.</p>';
-                resDiv.style.display = 'block';
+                res.innerHTML = '<p style="padding:10px; font-size:11px; color:gray">Kullanıcı bulunamadı.</p>';
+                res.style.display = 'block';
             }
         }
 
-        function renderSidebar() {
+        function startChat(uname) {
+            if(!db.interacted.includes(uname)) {
+                db.interacted.push(uname);
+                localStorage.setItem('dp_v6_inter', JSON.stringify(db.interacted));
+            }
+            document.getElementById('search-results').style.display = 'none';
+            document.getElementById('search-input').value = '';
+            openChat(uname);
+            renderList();
+        }
+
+        function renderList() {
             const list = document.getElementById('chat-list');
             list.innerHTML = '';
-            const interacted = new Set();
-            db.msgs.forEach(m => {
-                if(m.from === db.session.username) interacted.add(m.to);
-                if(m.to === db.session.username) interacted.add(m.from);
-            });
-
-            interacted.forEach(uname => {
+            
+            db.interacted.forEach(uname => {
                 const u = db.users.find(x => x.username === uname);
                 if(!u) return;
                 const div = document.createElement('div');
                 div.className = 'chat-item';
                 div.onclick = () => openChat(uname);
-                div.innerHTML = `<img src="${u.avatar || defAv()}" class="avatar"><div><b>${uname}</b><br><small style="color:var(--muted)">${u.bio || '...'}</small></div>`;
+                div.innerHTML = `<img src="${u.avatar || defAv()}" class="avatar"><div><b>${uname}</b><br><small style="color:var(--muted)">${u.bio || 'Mesaj gönder...'}</small></div>`;
                 list.appendChild(div);
             });
         }
 
-        // --- CHAT LOGIC ---
+        // --- SOHBET ---
         function openChat(uname) {
-            activeChat = uname;
+            active = uname;
             const u = db.users.find(x => x.username === uname);
-            document.getElementById('search-results').style.display = 'none';
-            document.getElementById('search-input').value = '';
-            
             document.getElementById('chat-header').style.display = 'flex';
             document.getElementById('input-bar').style.display = 'flex';
-            document.getElementById('target-name').innerText = uname;
-            document.getElementById('target-avatar').src = u.avatar || defAv();
-            document.getElementById('block-btn').innerText = db.session.blocked.includes(uname) ? "AÇ" : "ENGELLE";
-
+            document.getElementById('t-name').innerText = uname;
+            document.getElementById('t-av').src = u.avatar || defAv();
+            
             if(window.innerWidth < 768) {
-                document.getElementById('sidebar').classList.add('hidden');
-                document.getElementById('back-btn').style.display = 'block';
+                document.getElementById('sidebar').classList.add('hide');
+                document.getElementById('m-back').style.display = 'block';
             }
             renderMsgs();
         }
 
-        function closeChat() { document.getElementById('sidebar').classList.remove('hidden'); }
-
         function renderMsgs() {
             const box = document.getElementById('msg-container');
             box.innerHTML = '';
-            const filtered = db.msgs.filter(m => 
-                ((m.from === db.session.username && m.to === activeChat) || (m.to === db.session.username && m.from === activeChat))
-                && !m.delBy.includes(db.session.username)
-            );
-
+            const filtered = db.msgs.filter(m => (m.f === db.session.username && m.t === active) || (m.t === db.session.username && m.f === active));
+            
             filtered.forEach(m => {
                 const div = document.createElement('div');
-                div.className = `msg ${m.from === db.session.username ? 'msg-out' : 'msg-in'}`;
-                if(m.isDelAll) {
-                    div.innerHTML = '<span style="opacity:0.5; font-style:italic">Bu mesaj silindi.</span>';
-                } else {
-                    div.innerHTML = `<span>${m.txt}</span>`;
-                    div.onclick = () => showModal(m.id, m.from === db.session.username);
-                    if(Object.keys(m.reacts).length > 0) {
-                        let rHtml = '<div class="react-bar">';
-                        for(let key in m.reacts) rHtml += `<span class="react-tag">${key} ${m.reacts[key]}</span>`;
-                        div.innerHTML += rHtml + '</div>';
-                    }
-                }
+                div.className = `msg ${m.f === db.session.username ? 'msg-out' : 'msg-in'}`;
+                div.innerText = m.txt;
                 box.appendChild(div);
             });
             box.scrollTop = box.scrollHeight;
         }
 
-        function sendMsg() {
-            const inp = document.getElementById('msg-input');
-            const target = db.users.find(u => u.username === activeChat);
-            if(!inp.value.trim() || target.blocked.includes(db.session.username)) return;
-
-            db.msgs.push({
-                id: Date.now(), from: db.session.username, to: activeChat,
-                txt: inp.value, delBy: [], isDelAll: false, reacts: {}
-            });
-            inp.value = '';
-            save(); renderMsgs(); renderSidebar();
+        function send() {
+            const i = document.getElementById('msg-in');
+            if(!i.value.trim()) return;
+            db.msgs.push({ f: db.session.username, t: active, txt: i.value });
+            i.value = '';
+            save(); renderMsgs();
         }
 
-        // --- PROFILE ---
-        function togglePanel(id) { document.getElementById(id).classList.toggle('open'); }
-        
+        // --- PROFİLLER ---
+        function openPanel(id) { document.getElementById(id).classList.add('open'); }
+        function closePanel(id) { document.getElementById(id).classList.remove('open'); }
+
+        function showTargetProfile() {
+            const u = db.users.find(x => x.username === active);
+            document.getElementById('tp-av').src = u.avatar || defAv();
+            document.getElementById('tp-name').innerText = u.username;
+            document.getElementById('tp-bio').innerText = u.bio || "Hakkında bir bilgi eklememiş.";
+            document.getElementById('tp-bday').innerText = u.bday ? "🎂 Doğum Günü: " + u.bday : "";
+            openPanel('target-profile');
+        }
+
         function updateUI() {
-            document.getElementById('my-avatar').src = db.session.avatar || defAv();
-            document.getElementById('edit-avatar-preview').src = db.session.avatar || defAv();
-            document.getElementById('edit-username').value = db.session.username;
-            document.getElementById('edit-bio').value = db.session.bio;
-            document.getElementById('edit-bday').value = db.session.bday;
+            document.getElementById('my-av').src = db.session.avatar || defAv();
+            document.getElementById('my-av-big').src = db.session.avatar || defAv();
+            document.getElementById('my-name-in').value = db.session.username;
+            document.getElementById('my-bio-in').value = db.session.bio;
+            document.getElementById('my-bday-in').value = db.session.bday;
         }
 
-        function saveProfile() {
-            const newName = document.getElementById('edit-username').value.trim();
-            const oldName = db.session.username;
+        function saveMe() {
+            const old = db.session.username;
+            const newN = document.getElementById('my-name-in').value.trim();
+            if(newN !== old && db.users.find(x => x.username === newN)) { alert("İsim alınmış!"); return; }
 
-            if(newName !== oldName && db.users.find(u => u.username === newName)) { alert("İsim kullanımda!"); return; }
-
-            db.msgs.forEach(m => { if(m.from === oldName) m.from = newName; if(m.to === oldName) m.to = newName; });
-            db.session.username = newName;
-            db.session.bio = document.getElementById('edit-bio').value;
-            db.session.bday = document.getElementById('edit-bday').value;
-            
-            db.users = db.users.map(u => u.username === oldName ? db.session : u);
-            save(); updateUI(); renderSidebar();
-            alert("Sistem güncellendi.");
+            db.msgs.forEach(m => { if(m.f === old) m.f = newN; if(m.t === old) m.t = newN; });
+            db.session.username = newN;
+            db.session.bio = document.getElementById('my-bio-in').value;
+            db.session.bday = document.getElementById('my-bday-in').value;
+            db.users = db.users.map(u => u.username === old ? db.session : u);
+            save(); updateUI(); renderList();
+            alert("Profil güncellendi!");
         }
 
-        function updateAvatar(input) {
+        function changeAv(input) {
             if(input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = (e) => { db.session.avatar = e.target.result; updateUI(); save(); };
@@ -382,45 +339,23 @@
             }
         }
 
-        // --- UTILS ---
-        function showModal(id, isMine) {
-            selectedMsgId = id;
-            document.getElementById('msg-modal').style.display = 'flex';
-            document.getElementById('btn-del-all').style.display = isMine ? 'block' : 'none';
-        }
-        function closeModal() { document.getElementById('msg-modal').style.display = 'none'; }
-        
-        function deleteMsg(type) {
-            const m = db.msgs.find(x => x.id === selectedMsgId);
-            if(type === 'me') m.delBy.push(db.session.username);
-            else m.isDelAll = true;
-            save(); renderMsgs(); closeModal();
-        }
-
-        function reactMsg(emoji) {
-            const m = db.msgs.find(x => x.id === selectedMsgId);
-            m.reacts[emoji] = (m.reacts[emoji] || 0) + 1;
-            save(); renderMsgs(); closeModal();
-        }
-
-        function toggleBlock() {
-            if(db.session.blocked.includes(activeChat)) db.session.blocked = db.session.blocked.filter(x => x !== activeChat);
-            else db.session.blocked.push(activeChat);
-            save(); openChat(activeChat);
+        function mobileBack() {
+            document.getElementById('sidebar').classList.remove('hide');
+            document.getElementById('m-back').style.display = 'none';
         }
 
         function save() {
-            localStorage.setItem('de_v5_users', JSON.stringify(db.users));
-            localStorage.setItem('de_v5_msgs', JSON.stringify(db.msgs));
+            localStorage.setItem('dp_v6_users', JSON.stringify(db.users));
+            localStorage.setItem('dp_v6_msgs', JSON.stringify(db.msgs));
         }
 
         function defAv() { return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23555' d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E"; }
 
         window.addEventListener('storage', () => {
-            db.users = JSON.parse(localStorage.getItem('de_v5_users')) || [];
-            db.msgs = JSON.parse(localStorage.getItem('de_v5_msgs')) || [];
-            if(activeChat) renderMsgs();
-            renderSidebar();
+            db.users = JSON.parse(localStorage.getItem('dp_v6_users')) || [];
+            db.msgs = JSON.parse(localStorage.getItem('dp_v6_msgs')) || [];
+            if(active) renderMsgs();
+            renderList();
         });
     </script>
 </body>
