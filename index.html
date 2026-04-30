@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Delta Eclipse Messenger</title>
+    <style>
+        :root {
+            --primary: #008069;
+            --primary-dark: #005c4b;
+            --bg-body: #d1d7db;
+            --bg-app: #f0f2f5;
+            --bg-chat: #efeae2;
+            --msg-out: #dcf8c6;
+            --msg-in: #ffffff;
+            --text-dark: #111b21;
+            --text-muted: #667781;
+            --border: #e9edef;
+            --sidebar-bg: #ffffff;
+            --input-bg: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode {
+            --bg-body: #0b141a;
+            --bg-app: #111b21;
+            --bg-chat: #0b141a;
+            --msg-out: #005c4b;
+            --msg-in: #202c33;
+            --text-dark: #e9edef;
+            --text-muted: #8696a0;
+            --border: #222d34;
+            --sidebar-bg: #111b21;
+            --input-bg: #2a3942;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+
+        body {
+            background-color: var(--bg-body);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            transition: background 0.4s ease;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes messagePop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+
+        /* --- AUTH SCREEN --- */
+        #auth-container {
+            position: fixed;
+            inset: 0;
+            background: var(--primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .auth-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .auth-card h1 { color: var(--primary); margin-bottom: 25px; font-size: 24px; }
+        .auth-input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+        }
+        .auth-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .auth-btn:hover { background: var(--primary-dark); transform: translateY(-2px); }
+
+        /* --- MAIN APP --- */
+        #app-view {
+            display: none; /* Initially Hidden */
+            width: 100%;
+            max-width: 1600px;
+            height: 95vh;
+            background: var(--bg-app);
+            box-shadow: 0 10px 30px var(--shadow);
+            border-radius: 5px;
+            overflow: hidden;
+            animation: fadeIn 0.8s ease;
+        }
+
+        /* --- SIDEBAR --- */
+        #sidebar {
+            width: 35%;
+            min-width: 350px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .sidebar-header {
+            background: var(--bg-app);
+            height: 60px;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .avatar-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #dfe5e7;
+            cursor: pointer;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 18px;
+        }
+        .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
+
+        .search-container { padding: 10px; background: var(--sidebar-bg); }
+        .search-box {
+            background: var(--bg-app);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding: 5px 15px;
+        }
+        .search-box input {
+            border: none; background: transparent; outline: none; width: 100%; padding: 8px;
+            color: var(--text-dark);
+        }
+
+        /* --- CHAT LIST --- */
+        .chat-list { flex: 1; overflow-y: auto; }
+        .chat-item {
+            display: flex; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border);
+            transition: 0.2s;
+        }
+        .chat-item:hover { background: var(--bg-app); }
+        .chat-item.active { background: var(--bg-app); }
+        .chat-meta { flex: 1; margin-left: 15px; }
+        .chat-top { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .chat-name { color: var(--text-dark); font-weight: 600; }
+        .chat-last-msg { color: var(--text-muted); font-size: 13px; }
+
+        /* --- SETTINGS PANEL --- */
+        #settings-panel {
+            position: absolute; inset: 0; background: var(--sidebar-bg); z-index: 100;
+            transform: translateX(-100%); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column;
+        }
+        #settings-panel.open { transform: translateX(0); }
+        .settings-header {
+            background: var(--primary); color: white; padding: 50px 20px 20px;
+            display: flex; align-items: center; gap: 20px; font-size: 18px;
+        }
+
+        .profile-section { padding: 30px; text-align: center; }
+        .profile-img-upload {
+            width: 180px; height: 180px; border-radius: 50%; margin: 0 auto 20px;
+            background: #eee; border: 4px solid var(--primary);
+            cursor: pointer; overflow: hidden; position: relative;
+        }
+        .profile-img-upload:hover::after {
+            content: "DEĞİŞTİR"; position: absolute; inset: 0; background: rgba(0,0,0,0.4);
+            color: white; display: flex; align-items: center; justify-content: center; font-size: 12px;
+        }
+        .profile-img-upload img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* --- CHAT WINDOW --- */
+        #chat-window { flex: 1; display: flex; flex-direction: column; background: var(--bg-chat); position: relative; }
+        .chat-header {
+            background: var(--bg-app); height: 60px; padding: 10px 16px;
+            display: flex; align-items: center; border-bottom: 1px solid var(--border);
+        }
+        .messages-container { flex: 1; padding: 20px 7%; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+
+        .message-bubble {
+            max-width: 65%; padding: 8px 12px; border-radius: 8px; font-size: 14.5px;
+            box-shadow: 0 1px 2px var(--shadow); color: #000;
+            animation: messagePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .dark-mode .message-bubble { color: #e9edef; }
+        .msg-out { background: var(--msg-out); align-self: flex-end; border-top-right-radius: 0; }
+        .msg-in { background: var(--msg-in); align-self: flex-start; border-top-left-radius: 0; }
+        
+        .chat-input-area {
+            background: var(--bg-app); padding: 10px 15px; display: flex; align-items: center; gap: 10px;
+        }
+        .chat-input-area input {
+            flex: 1; padding: 12px 18px; border-radius: 25px; border: none; outline: none;
+            background: var(--input-bg); color: var(--text-dark); font-size: 15px;
+        }
+
+        .btn-icon { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); padding: 5px; }
+
+        /* --- MOBILE RESPONSIVE --- */
+        @media (max-width: 768px) {
+            #sidebar { width: 100%; min-width: 100%; }
+            #chat-window { display: none; width: 100%; }
+            .mobile-chat-active #sidebar { display: none; }
+            .mobile-chat-active #chat-window { display: flex; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- GİRİŞ EKRANI (TAM İZOLASYON) -->
+    <div id="auth-container">
+        <div class="auth-card">
+            <h1 id="auth-title">Delta Eclipse</h1>
+            <p id="auth-error" style="color:red; font-size:12px; margin-bottom:10px; display:none;">Hata!</p>
+            <input type="text" id="username" class="auth-input" placeholder="Kullanıcı Adı">
+            <input type="password" id="password" class="auth-input" placeholder="Şifre">
+            <button class="auth-btn" onclick="handleAuth()">Giriş Yap / Kaydol</button>
+            <p style="margin-top:20px; font-size:13px; color:var(--text-muted);">Yeni kullanıcılar için otomatik kayıt yapılır.</p>
+        </div>
+    </div>
+
+    <!-- ANA UYGULAMA -->
+    <div id="app-view">
+        <!-- SOL PANEL -->
+        <div id="sidebar">
+            <!-- AYARLAR PANELİ (SOLA KAYAN) -->
+            <div id="settings-panel">
+                <div class="settings-header">
+                    <button class="btn-icon" style="color:white" onclick="toggleSettings()">⬅</button>
+                    <span>Profil</span>
+                </div>
+                <div class="profile-section">
+                    <div class="profile-img-upload" onclick="document.getElementById('file-input').click()">
+                        <img id="p-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=">
+                    </div>
+                    <input type="file" id="file-input" hidden accept="image/*" onchange="uploadPhoto(this)">
+                    <h2 id="p-name" style="color:var(--text-dark); margin-bottom:10px;">İsim</h2>
+                    
+                    <div style="margin-top:30px; display:flex; flex-direction:column; gap:10px;">
+                        <button class="auth-btn" style="background:var(--text-muted)" onclick="toggleDarkMode()">🌙 Temayı Değiştir</button>
+                        <button class="auth-btn" style="background:#e74c3c" onclick="logout()">Oturumu Kapat</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-header">
+                <div class="avatar-box" onclick="toggleSettings()">
+                    <img id="my-avatar" src="">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <span class="btn-icon" onclick="toggleDarkMode()">🌓</span>
+                    <span class="btn-icon" onclick="toggleSettings()">⚙️</span>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <div class="search-box">
+                    <span>🔍</span>
+                    <input type="text" id="search-input" placeholder="Kullanıcı ara..." onkeyup="filterUsers()">
+                </div>
+            </div>
+
+            <div class="chat-list" id="user-list">
+                <!-- Dinamik Liste -->
+            </div>
+        </div>
+
+        <!-- SAĞ PANEL -->
+        <div id="chat-window">
+            <div id="no-chat-screen" style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; color:var(--text-muted); text-align:center; padding:40px;">
+                <div style="font-size:60px;">🚀</div>
+                <h3>Delta Eclipse Messenger</h3>
+                <p>Bir sohbet seçerek mesajlaşmaya başla.</p>
+            </div>
+
+            <div id="active-chat-screen" style="display:none; flex-direction:column; height:100%;">
+                <div class="chat-header">
+                    <button class="btn-icon" id="back-btn" onclick="closeMobileChat()">⬅</button>
+                    <div class="avatar-box" id="target-avatar" style="width:35px; height:35px; margin-left:10px;"></div>
+                    <div style="margin-left:15px;">
+                        <div class="chat-name" id="target-name">İsim</div>
+                        <div style="font-size:11px; color:var(--primary)">çevrimiçi</div>
+                    </div>
+                </div>
+
+                <div class="messages-container" id="messages-box"></div>
+
+                <div class="chat-input-area">
+                    <input type="text" id="message-input" placeholder="Mesaj yazın..." onkeypress="if(event.key=='Enter') sendMsg()">
+                    <button class="btn-icon" onclick="sendMsg()" style="color:var(--primary); font-size:24px;">➤</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA & STATE ---
+        let users = JSON.parse(localStorage.getItem('de_users')) || [];
+        let messages = JSON.parse(localStorage.getItem('de_msgs')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('de_session')) || null;
+        let activeTarget = null;
+
+        // --- AUTH ---
+        function handleAuth() {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            const err = document.getElementById('auth-error');
+
+            if(!u || !p) { err.innerText="Alanları doldur!"; err.style.display="block"; return; }
+
+            let user = users.find(x => x.username === u);
+            
+            if(user) {
+                if(user.password !== p) { err.innerText="Hatalı şifre!"; err.style.display="block"; return; }
+            } else {
+                // Register
+                user = { username: u, password: p, avatar: '' };
+                users.push(user);
+                localStorage.setItem('de_users', JSON.stringify(users));
+            }
+
+            currentUser = user;
+            localStorage.setItem('de_session', JSON.stringify(user));
+            initApp();
+        }
+
+        function logout() {
+            localStorage.removeItem('de_session');
+            location.reload();
+        }
+
+        // --- APP LOGIC ---
+        function initApp() {
+            if(!currentUser) return;
+            document.getElementById('auth-container').style.transform = 'translateY(-100%)';
+            document.getElementById('app-view').style.display = 'flex';
+            
+            // Profil bilgilerini güncelle
+            document.getElementById('my-avatar').src = currentUser.avatar || defaultAvatar(currentUser.username);
+            document.getElementById('p-img').src = currentUser.avatar || defaultAvatar(currentUser.username);
+            document.getElementById('p-name').innerText = currentUser.username;
+            
+            if(localStorage.getItem('de_dark') === 'true') document.body.classList.add('dark-mode');
+            
+            refreshUserList();
+        }
+
+        function refreshUserList() {
+            const list = document.getElementById('user-list');
+            const search = document.getElementById('search-input').value.toLowerCase();
+            list.innerHTML = '';
+
+            // Kendimiz hariç tüm kullanıcıları listele
+            users.filter(u => u.username !== currentUser.username).forEach(u => {
+                if(search && !u.username.toLowerCase().includes(search)) return;
+
+                // Son mesajı bul
+                const chatMsgs = messages.filter(m => 
+                    (m.from === currentUser.username && m.to === u.username) || 
+                    (m.to === currentUser.username && m.from === u.username)
+                );
+                const last = chatMsgs.length > 0 ? chatMsgs[chatMsgs.length-1].text : 'Sohbeti başlat...';
+
+                const div = document.createElement('div');
+                div.className = `chat-item ${activeTarget === u.username ? 'active' : ''}`;
+                div.onclick = () => openChat(u);
+                div.innerHTML = `
+                    <div class="avatar-box"><img src="${u.avatar || defaultAvatar(u.username)}"></div>
+                    <div class="chat-meta">
+                        <div class="chat-top"><span class="chat-name">${u.username}</span></div>
+                        <div class="chat-last-msg">${last}</div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function openChat(user) {
+            activeTarget = user.username;
+            document.getElementById('no-chat-screen').style.display = 'none';
+            document.getElementById('active-chat-screen').style.display = 'flex';
+            document.getElementById('target-name').innerText = user.username;
+            document.getElementById('target-avatar').innerHTML = `<img src="${user.avatar || defaultAvatar(user.username)}">`;
+            
+            document.body.classList.add('mobile-chat-active');
+            renderMessages();
+            refreshUserList();
+        }
+
+        function renderMessages() {
+            const box = document.getElementById('messages-box');
+            box.innerHTML = '';
+            
+            const filtered = messages.filter(m => 
+                (m.from === currentUser.username && m.to === activeTarget) || 
+                (m.to === currentUser.username && m.from === activeTarget)
+            );
+
+            filtered.forEach(m => {
+                const div = document.createElement('div');
+                div.className = `message-bubble ${m.from === currentUser.username ? 'msg-out' : 'msg-in'}`;
+                div.innerText = m.text;
+                box.appendChild(div);
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function sendMsg() {
+            const inp = document.getElementById('message-input');
+            const val = inp.value.trim();
+            if(!val || !activeTarget) return;
+
+            const msg = { from: currentUser.username, to: activeTarget, text: val, time: Date.now() };
+            messages.push(msg);
+            localStorage.setItem('de_msgs', JSON.stringify(messages));
+            
+            inp.value = '';
+            renderMessages();
+            refreshUserList();
+        }
+
+        // --- SETTINGS & PROFILE ---
+        function toggleSettings() {
+            document.getElementById('settings-panel').classList.toggle('open');
+        }
+
+        function uploadPhoto(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64 = e.target.result;
+                    document.getElementById('p-img').src = base64;
+                    document.getElementById('my-avatar').src = base64;
+                    
+                    // Veritabanını güncelle
+                    users = users.map(u => {
+                        if(u.username === currentUser.username) u.avatar = base64;
+                        return u;
+                    });
+                    localStorage.setItem('de_users', JSON.stringify(users));
+                    currentUser.avatar = base64;
+                    localStorage.setItem('de_session', JSON.stringify(currentUser));
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // --- UTILS ---
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('de_dark', isDark);
+        }
+
+        function defaultAvatar(name) {
+            return `https://ui-avatars.com/api/?name=${name}&background=random&color=fff`;
+        }
+
+        function filterUsers() { refreshUserList(); }
+
+        function closeMobileChat() {
+            document.body.classList.remove('mobile-chat-active');
+            activeTarget = null;
+        }
+
+        // Sayfa yüklendiğinde oturum kontrolü
+        window.onload = initApp;
+
+        // Sekmeler arası senkronizasyon
+        window.addEventListener('storage', () => {
+            users = JSON.parse(localStorage.getItem('de_users')) || [];
+            messages = JSON.parse(localStorage.getItem('de_msgs')) || [];
+            if(activeTarget) renderMessages();
+            refreshUserList();
+        });
+    </script>
+</body>
+</html>
