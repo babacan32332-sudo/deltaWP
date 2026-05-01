@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DELTA ECLIPSE PRIME</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Poppins:wght@300;400;600&display=swap');
+        
+        :root { --bg: #080a0f; --accent: #00f2ff; --panel: #11161d; }
+        body { background: var(--bg); color: #fff; font-family: 'Poppins', sans-serif; overflow: hidden; height: 100vh; }
+        .cyber-font { font-family: 'Orbitron', sans-serif; }
+
+        /* Giriş ve Kayıt Animasyonları */
+        .auth-container {
+            position: fixed; inset: 0; z-index: 100; background: var(--bg);
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+        }
+        .auth-card {
+            background: var(--panel); border: 1px solid rgba(0, 242, 255, 0.2);
+            padding: 2.5rem; border-radius: 1.5rem; width: 100%; max-width: 400px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5); transform: translateY(0);
+            transition: all 0.5s ease;
+        }
+        .hidden-auth { opacity: 0; pointer-events: none; transform: scale(1.1); }
+        
+        /* Mesaj Balonları */
+        .msg-anim { animation: flyIn 0.3s ease-out; }
+        @keyframes flyIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Custom Scroll */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<!-- GİRİŞ & KAYIT EKRANI -->
+<div id="auth-screen" class="auth-container">
+    <div class="auth-card" id="card-inner">
+        <h2 class="cyber-font text-3xl text-[#00f2ff] text-center mb-2 tracking-tighter">DELTA PRIME</h2>
+        <p class="text-gray-500 text-[10px] text-center uppercase tracking-[0.3em] mb-8">Global Access Terminal</p>
+        
+        <div class="space-y-4">
+            <div class="relative">
+                <i class="fas fa-user absolute left-4 top-4 text-gray-500"></i>
+                <input type="text" id="uname" placeholder="Kullanıcı Adı" 
+                    class="w-full bg-[#080a0f] border border-gray-800 p-3.5 pl-12 rounded-xl focus:border-[#00f2ff] outline-none transition text-sm">
+            </div>
+            
+            <div class="flex gap-2">
+                <input type="text" id="captcha-input" placeholder="Kod" 
+                    class="w-1/2 bg-[#080a0f] border border-gray-800 p-3.5 rounded-xl focus:border-[#00f2ff] outline-none text-center cyber-font">
+                <div id="captcha-box" class="w-1/2 bg-gray-800 rounded-xl flex items-center justify-center cyber-font text-[#00f2ff] tracking-widest select-none">
+                    8888
+                </div>
+            </div>
+
+            <button onclick="login()" class="w-full bg-[#00f2ff] text-black font-bold py-4 rounded-xl hover:shadow-[0_0_20px_rgba(0,242,255,0.4)] transition-all active:scale-95">
+                SİSTEME BAĞLAN
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ANA CHAT ARAYÜZÜ -->
+<div id="main-app" class="h-screen flex opacity-0 transition-opacity duration-1000">
+    <!-- Sol Sidebar: Aktif Gerçek Kişiler -->
+    <div class="w-72 bg-[#0d1117] border-r border-gray-800 flex flex-col">
+        <div class="p-6 border-b border-gray-800">
+            <h3 class="cyber-font text-[#00f2ff] text-xl">CORE V4</h3>
+            <span class="text-[9px] text-green-500 flex items-center gap-1 mt-1">
+                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></span> 
+                CANLI BAĞLANTILAR
+            </span>
+        </div>
+        <div id="user-list" class="flex-1 overflow-y-auto p-4 space-y-3">
+            <!-- Gerçek kişiler buraya js ile gelecek -->
+        </div>
+    </div>
+
+    <!-- Sağ: Sohbet Alanı -->
+    <div class="flex-1 flex flex-col bg-[#080a0f]">
+        <div class="h-16 border-b border-gray-800 flex items-center px-6 justify-between bg-[#0d1117]/50">
+            <div class="flex items-center gap-3">
+                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span class="text-sm font-bold tracking-widest uppercase">Global Chat</span>
+            </div>
+        </div>
+
+        <div id="chat-box" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
+
+        <div class="p-4 bg-[#0d1117] border-t border-gray-800">
+            <div class="flex gap-3">
+                <input type="text" id="msg-in" placeholder="Mesajını yaz..." 
+                    class="flex-1 bg-[#080a0f] border border-gray-800 p-3 rounded-xl outline-none focus:border-[#00f2ff]">
+                <button onclick="send()" class="w-12 h-12 bg-[#00f2ff] text-black rounded-xl flex items-center justify-center">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let ws;
+    let me = "";
+    let captcha = "";
+
+    // Captcha Üret
+    function genCaptcha() {
+        captcha = Math.floor(1000 + Math.random() * 9000).toString();
+        document.getElementById('captcha-box').innerText = captcha;
+    }
+    genCaptcha();
+
+    // Giriş Fonksiyonu (Animasyonlu)
+    function login() {
+        const user = document.getElementById('uname').value.trim();
+        const cap = document.getElementById('captcha-input').value;
+
+        if(user.length < 3) return alert("İsim çok kısa!");
+        if(cap !== captcha) return alert("Kod hatalı!");
+
+        me = user;
+        
+        // WebSocket Başlat (Cloudflare Workers için)
+        initWS();
+
+        // Çıkış Animasyonu
+        document.getElementById('auth-screen').classList.add('hidden-auth');
+        setTimeout(() => {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-app').classList.remove('opacity-0');
+        }, 800);
+    }
+
+    function initWS() {
+        // workers.dev üzerinde çalıştığında otomatik bağlanır
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+        ws.onopen = () => {
+            ws.send(JSON.stringify({type: 'join', user: me}));
+        };
+
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if(data.type === 'update_users') updateSidebar(data.users);
+            if(data.type === 'msg') renderMsg(data);
+        };
+    }
+
+    function updateSidebar(users) {
+        const list = document.getElementById('user-list');
+        list.innerHTML = "";
+        users.forEach(u => {
+            list.innerHTML += `
+                <div class="flex items-center gap-3 p-2 bg-white/5 rounded-lg border border-white/5 msg-anim">
+                    <div class="w-8 h-8 rounded-full bg-[#00f2ff] text-black flex items-center justify-center font-bold text-xs">${u[0]}</div>
+                    <span class="text-sm">${u}</span>
+                </div>
+            `;
+        });
+    }
+
+    function send() {
+        const input = document.getElementById('msg-in');
+        if(!input.value) return;
+        ws.send(JSON.stringify({type: 'msg', user: me, text: input.value}));
+        input.value = "";
+    }
+
+    function renderMsg(data) {
+        const box = document.getElementById('chat-box');
+        const isMe = data.user === me;
+        box.innerHTML += `
+            <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} msg-anim">
+                <span class="text-[10px] text-gray-500 mb-1">${data.user}</span>
+                <div class="max-w-[80%] p-3 rounded-2xl ${isMe ? 'bg-[#00f2ff] text-black rounded-tr-none' : 'bg-gray-800 text-white rounded-tl-none'} text-sm">
+                    ${data.text}
+                </div>
+            </div>
+        `;
+        box.scrollTop = box.scrollHeight;
+    }
+</script>
+</body>
+</html>
